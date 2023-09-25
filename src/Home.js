@@ -1,12 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import {
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  Button,
-  DialogTitle
-} from "@material-ui/core";
+
 import Card from "./card";
 
 import { useLocation } from "wouter";

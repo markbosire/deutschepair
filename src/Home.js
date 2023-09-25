@@ -18,62 +18,104 @@ import "./app.css";
 import axios from "axios";
 
 // A function that takes an API key and an API secret as parameters and returns an object with a picture and a tag
-async function PictureAndLabelList(apiKey, apiSecret) {
-  const results = [];
-  const uniqueUrls = new Set();
+async function PictureAndLabelList() {
+   // Colors
+   const colors = [
+    "Red",
+    "Blue",
+    "Green",
+    "Yellow",
+    "Orange",
+    "Purple",
+    "Pink",
+    "Brown",
+    "Black",
+    "White",
+    "Gray",
+    "Gold",
+    "Silver",
+    "Turquoise",
+    "Indigo",
+  ];
 
-  while (results.length < 8) {
+  // Shapes
+  const shapes = [
+    "Circle",
+    "Square",
+    "Triangle",
+    "Rectangle",
+    "Pentagon",
+    "Hexagon",
+    "Octagon",
+    "Oval",
+    "Diamond",
+    "Sphere",
+    "Cube",
+    "Cylinder",
+    "Cone",
+    "Pyramid",
+    "Star",
+    "Heart",
+  ];
+
+  // Adjectives for Size
+  const sizeAdjectives = [
+    "Tiny",
+    "Small",
+    "Miniature",
+    "Compact",
+    "Little",
+    "Medium-sized",
+    "Large",
+    "Big",
+    "Massive",
+    "Enormous",
+  ];
+
+  // Combined array
+  const allWords = [...colors, ...shapes, ...sizeAdjectives];
+
+  let result = [];
+
+  while (result.length < 8) {
+    let adjective = allWords[Math.floor(Math.random() * allWords.length)];
+
     try {
-      const unsplashResponse = await axios.get(
-        "https://source.unsplash.com/random/300x200"
-      );
+      // Use the Datamuse API to get a random English noun that is often described by the adjective
+      let response = await fetch(`https://api.datamuse.com/words?rel_jja=${adjective}`);
+      let data = await response.json();
+      console.log(data);
+      // Pick a random word from the list and assign it to the english variable
+      let english = data[Math.floor(Math.random() * data.length)].word;
 
-      const pictureUrl = unsplashResponse.request.responseURL;
+      // Use a translation API to get the German translation of the word
+      response = await fetch(`https://api.mymemory.translated.net/get?q=${english}&langpair=en|de`);
+      data = await response.json();
+      let german = data.responseData.translatedText;
 
-      if (uniqueUrls.has(pictureUrl)) {
-        continue;
+      // Check if English and German words are the same, and skip this iteration if they are
+      if (english === german) {
+        continue; // Retry generating a new word
       }
 
-      const imaggaUrl = `https://api.imagga.com/v2/tags?image_url=${pictureUrl}&language=en,de`;
-
-      const imaggaResponse = await axios.get(imaggaUrl, {
-        auth: {
-          username: apiKey,
-          password: apiSecret,
-        },
-      });
-     
-      if (imaggaResponse.status != 200) {
-        console.log(imaggaResponse.status)
-        continue;
+      // Use an image search API to get an image URL related to the word
+      response = await fetch(`https://pixabay.com/api/?key=39663658-0cb372c25caa8ebb261c7c1e8&q=${english}&image_type=photo`);
+      data = await response.json();
+      if (data.hits.length === 0) {
+        throw new Error("No image found"); // Throw an error if no image is found
       }
+      let randomIndex = Math.floor(Math.random() * data.hits.length);
+      let picUrl = data.hits[randomIndex].webformatURL;
 
-      const data = imaggaResponse.data;
-
-      if (
-        data &&
-        data.result &&
-        data.result.tags &&
-        data.result.tags.length > 0
-      ) {
-        const tags = data.result.tags.slice(0, 3).map(tag => ({
-          text: tag.tag.en, // English tag
-          de: tag.tag.de,    // German tag
-        }));
-
-        results.push({ pictureUrl, tags });
-        uniqueUrls.add(pictureUrl);
-      } else {
-        // Skip this iteration if there are no tags
-        continue;
-      }
-    } catch (err) {
-      
-      console.log(err.message)
+      // Add the word object to the result array
+      result.push({ picUrl, english, german });
+    } catch (error) {
+      console.error(error);
+      continue; // Retry generating a new word on error
     }
   }
 
-  return results;
+  return result;
 }
 
 
@@ -191,21 +233,20 @@ const[loading,setLoading]=useState(false)
       inputArray.forEach((item, index) => {
         
         // Combine tags into a single string
-        const combinedTags = item.tags.map(tag => tag.de).join(', ');
-        const enTags=item.tags.map(tag => tag.text).join(', ');
+     
        
         // Add to uniqueElementsArray
         uniqueElementsArray.push({
           id: index + 1,
-          text: combinedTags,
-          en:enTags,
+          text: item.german,
+          en: item.english,
           type: "text"
         });
   
         // Add to uniqueElementsArray2
         uniqueElementsArray2.push({
           id: index + 1,
-          text: item.pictureUrl,
+          text: item.picUrl,
           type: "image"
         });
           
@@ -272,8 +313,8 @@ const[loading,setLoading]=useState(false)
     clearedCardData[i].forEach((card, index) => {
       renderedCards.push(
         <div key={index} className="cleared-card">
-          {card.type === "image" && <img src={card.text} alt="Cleared Card" />}
-          <div className="tags">
+          {card.type === "image" && <div className={i%2===0?"even":"odd"}><img src={card.text} alt="Cleared Card" /></div>}
+          <div className={i%2===0?"even":"odd"}>
             {card.type === "text" && (
               <div>
                 <p>English: {card.en}</p>
@@ -342,30 +383,7 @@ const[loading,setLoading]=useState(false)
 </div>
 
       </footer>
-      <Dialog
-        open={showModal}
-        disableBackdropClick
-        disableEscapeKeyDown
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">
-          Hurray!!! You completed the challenge
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            You completed the game in {moves} moves. Your best score is{" "}
-            {bestScore} moves.
-          </DialogContentText>     
-          
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleRestart} color="primary">
-            New Game
-          </Button>
-       
-        </DialogActions>
-      </Dialog>
+ 
     </div>:<div className="landingPage"><img src="https://s11.gifyu.com/images/S4CQB.gif" className="loading" alt=""></img></div>
   );
 }

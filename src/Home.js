@@ -377,6 +377,6 @@ const[loading,setLoading]=useState(false)
 
       </footer>
  
-    </div>:<div className="landingPage"><img src="https://s11.gifyu.com/images/S4CQB.gif" className="loading" alt=""></img></div>
+    </div>:<div className="landingPage"><div class="loader"></div></div>
   );
 }
